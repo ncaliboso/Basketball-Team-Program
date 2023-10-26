@@ -1,0 +1,708 @@
+Imports System.Data
+Imports System.Data.SqlClient
+ 
+Public Class WebForm1
+    Inherits System.Web.UI.Page
+#Region "Variables"
+    Public Shared con As New SqlConnection("Data Source = cb-ot-devst04.ad.wsu.edu;Initial Catalog= MF325191;Persist Security Info = True;User ID = niccaliboso;Password = !@#qWe11513523")
+ 
+    Public Shared daStats As New SqlDataAdapter("SELECT * FROM niccaliboso.Stats", con)
+    Public Shared cbStats As New SqlCommandBuilder(daStats)
+    Public Shared dtStats As New DataTable
+ 
+    Public Shared daRoster As New SqlDataAdapter("SELECT * FROM niccaliboso.Roster", con)
+    Public Shared cbRoster As New SqlCommandBuilder(daRoster)
+    Public Shared dtRoster As New DataTable
+    Public Shared dtRosterforDDL As New DataTable
+ 
+    Public Shared daTraining As New SqlDataAdapter("SELECT * FROM niccaliboso.Train", con)
+    Public Shared cbTraining As New SqlCommandBuilder(daTraining)
+    Public Shared dtTraining As New DataTable
+ 
+    Public Shared daCoahces As New SqlDataAdapter("SELECT * FROM niccaliboso.Coaches", con)
+    Public Shared cbCoaches As New SqlCommandBuilder(daCoahces)
+    Public Shared dtCoaches As New DataTable
+    Public Shared dtCoachesforDDL As New DataTable
+ 
+    Public Shared gdaStats As New SqlDataAdapter("SELECT * from Stats WHERE PlayerID = @p1", con)
+    Public Shared gdtStats As New DataTable
+    Public Shared CommandBuilderGet1 As New SqlCommandBuilder(gdaStats)
+ 
+    'Public Shared gdaInventory As New SqlDataAdapter("SELECT * from InventoryTable WHERE StrainID = @p1", con)
+    'Public Shared gdtInventory As New DataTable
+    'Public Shared CommandBuilderGetOne As New SqlCommandBuilder(gda)
+ 
+ 
+ 
+ 
+    Public Shared dtSeasonTotals As New DataTable
+    Public Shared Points As Decimal
+    Public Shared FGM As Decimal
+    Public Shared FGA As Decimal
+    Public Shared gdtFGP As Decimal
+    Public Shared gdtTPM As Decimal
+    Public Shared TPA As Decimal
+    Public Shared gdtTPP As Decimal
+    'Public Shared FTM As Decimal
+    'Public Shared FTA As Decimal
+    Public Shared gdtFTP As Decimal
+    Public Shared Turnovers As Decimal
+    Public Shared Steals As Decimal
+    Public Shared Blocks As Decimal
+    Public Shared Rebounds As Decimal
+    Public Shared Assists As Decimal
+    Public Shared Fouls As Decimal
+ 
+ 
+ 
+    Public Shared totPoints As Decimal
+    Public Shared totAssists As Decimal
+    Public Shared totRebounds As Decimal
+    Public Shared totSteals As Decimal
+    Public Shared totTurnovers As Decimal
+    Public Shared totFouls As Decimal
+    Public Shared totBlocks As Decimal
+ 
+    Public Shared gintloopcounter As Integer = 0
+ 
+    Public Shared totGames As Integer
+    Public Shared totFGP As Decimal
+    Public Shared totTPP As Decimal
+    Public Shared totFTP As Decimal
+ 
+#End Region
+#Region "Page Intilization"
+    Private Sub WebForm1_Init(sender As Object, e As EventArgs) Handles Me.Init
+        daStats.FillSchema(dtStats, SchemaType.Mapped)
+        daRoster.FillSchema(dtRoster, SchemaType.Mapped)
+        daCoahces.FillSchema(dtCoaches, SchemaType.Mapped)
+        daTraining.FillSchema(dtTraining, SchemaType.Mapped)
+ 
+ 
+ 
+ 
+        ''This only allows the data table to be created once
+        If dtSeasonTotals.Columns.Count > 0 Then Exit Sub
+ 
+        ''This hard codes each column name and defines their dimension
+        With dtSeasonTotals.Columns
+ 
+            .Add("Total Points", GetType(Decimal))
+            .Add("FG %", GetType(Decimal))
+            .Add("3P %", GetType(Decimal))
+            .Add("FT %", GetType(Decimal))
+            .Add("Assist", GetType(Decimal))
+            .Add("Rebound", GetType(Decimal))
+            .Add("Turnover", GetType(Decimal))
+            .Add("Steal", GetType(Decimal))
+            .Add("Block", GetType(Decimal))
+            .Add("Foul", GetType(Decimal))
+        End With
+ 
+       
+ 
+ 
+ 
+        'Inserts columns into data table
+        GridView1.DataSource = dtSeasonTotals
+        GridView1.DataBind()
+ 
+ 
+ 
+      
+ 
+        If dtRosterforDDL.Rows.Count > 0 Then dtRosterforDDL.Rows.Clear()
+        If dtCoachesforDDL.Rows.Count > 0 Then dtCoachesforDDL.Rows.Clear()
+ 
+        Try 'Filling the Players DDL for stats and training
+            daRoster.Fill(dtRosterforDDL)
+            With ddlPlayerStats
+                .DataSource = dtRosterforDDL
+                .DataTextField = "Name"
+                .DataValueField = "PlayerID"
+                .DataBind()
+                .Items.Insert(0, "Select a player")
+            End With
+            With ddlPlayerTraining
+                .DataSource = dtRosterforDDL
+                .DataTextField = "Name"
+                .DataValueField = "PlayerID"
+                .DataBind()
+                .Items.Insert(0, "Select a player")
+            End With
+            With ddlFilterTrain
+                .DataSource = dtRosterforDDL
+                .DataTextField = "Name"
+                .DataValueField = "PlayerID"
+                .DataBind()
+                .Items.Insert(0, "Select a player")
+            End With
+            With ddlFilterStats
+                .DataSource = dtRosterforDDL
+                .DataTextField = "Name"
+                .DataValueField = "PlayerID"
+                .DataBind()
+                .Items.Insert(0, "Select a player")
+            End With
+        Catch ex As Exception
+            Response.Write(ex.Message)
+        End Try
+ 
+ 
+        Try 'filling the coahces ddl in the training view
+            daCoahces.Fill(dtCoachesforDDL)
+            With ddlCoachTraining
+                .DataSource = dtCoachesforDDL
+                .DataTextField = "CoachName"
+                .DataValueField = "CoachID"
+                .DataBind()
+                .Items.Insert(0, "Select a coach")
+            End With
+        Catch ex As Exception
+            Response.Write(ex.Message)
+        End Try
+ 
+        Try
+            daStats.Update(dtStats)
+            dtStats.Rows.Clear()
+            daStats.Fill(dtStats)
+            GridView5.DataSource = dtStats
+            GridView5.DataBind()
+ 
+ 
+        Catch ex As Exception
+            Response.Write(ex.Message)
+        End Try
+        Try
+            daTraining.Update(dtTraining)
+            dtTraining.Rows.Clear()
+            daTraining.Fill(dtTraining)
+            GridView3.DataSource = dtTraining
+            GridView3.DataBind()
+        Catch ex As Exception
+            Response.Write(ex.Message)
+        End Try
+ 
+    End Sub
+#End Region
+ 
+   
+ 
+    Protected Sub Page_Load(ByVal sender As Object, ByVal e As System.EventArgs) Handles Me.Load
+ 
+    End Sub
+#Region "Entering Stats"
+    Protected Sub btnEnter_Click(sender As Object, e As EventArgs) Handles btnEnter.Click
+ 
+ 
+        Dim dr2 As DataRow = dtSeasonTotals.NewRow
+ 
+        'Dimensions for stat calculations
+        Dim AST As Decimal
+        Dim TS As Decimal
+        Dim EFG As Decimal
+ 
+        If dtStats.Rows.Count > 0 Then dtStats.Rows.Clear()
+ 
+        If ddlPlayerStats.SelectedIndex < 0 Then
+            txtOutput.Text = "Please select a player"
+            Exit Sub
+        End If
+ 
+        Dim dr As DataRow = dtStats.NewRow
+        
+ 
+     
+ 
+        'Calculations
+        gdtFGP = (txtFGM.Text / txtFGA.Text) * 100
+        gdtFTP = (txt3PM.Text / txt3PA.Text) * 100
+        gdtTPP = (txtFTM.Text / txtFTA.Text) * 100
+        AST = txtAssist.Text / txtTurnovers.Text
+        TS = (txtPoints.Text / (2 * (txtFGA.Text + (0.44 * txtFTA.Text)))) * 100
+        EFG = ((txtFGM.Text + 0.5 * txt3PM.Text) / txtFGA.Text) * 100
+ 
+        'Tells each column where to retrieve its data from
+        dr.Item("PlayerName") = ddlPlayerStats.SelectedItem.Text
+        dr.Item("FG") = gdtFGP
+        dr.Item("ThreePoint") = gdtTPP
+        dr.Item("Assists") = txtAssist.Text
+        dr.Item("Rebounds") = txtRebounds.Text
+        dr.Item("Turnovers") = txtTurnovers.Text
+        dr.Item("Steals") = txtSteals.Text
+        dr.Item("Blocks") = txtBlocks.Text
+        dr.Item("Fouls") = txtFouls.Text
+        dr.Item("FT") = gdtFTP
+        dtStats.Rows.Add(dr)
+ 
+        Try
+            daStats.Update(dtStats)
+            dtStats.Rows.Clear()
+            daStats.Fill(dtStats)
+            GridView5.DataSource = dtStats
+            GridView5.DataBind()
+ 
+ 
+        Catch ex As Exception
+            Response.Write(ex.Message)
+        End Try
+ 
+        Try
+            daStats.Update(dtStats)
+            Call UpdateStats()
+        Catch ex As Exception
+ 
+        End Try
+ 
+ 
+        'SEASON TOTAL BELOW -------------------------------------------------------------
+ 
+ 
+ 
+        'Calculates total %'s
+        totGames += 1
+        totFGP += gdtFGP
+        totFGP = (totFGP / totGames)
+ 
+        totTPP += gdtTPP
+        totTPP = (totTPP / totGames)
+ 
+        totFTP += gdtFTP
+        totFTP = (totFTP / totGames)
+ 
+ 
+ 
+ 
+ 
+        'Adds total stats into each global variable
+        totPoints += txtPoints.Text
+        totAssists += txtAssist.Text
+        totFouls += txtFouls.Text
+        totRebounds += txtRebounds.Text
+        totSteals += txtSteals.Text
+        totBlocks += txtBlocks.Text
+        totTurnovers += txtTurnovers.Text
+ 
+        'Tells data table what to input into each column
+        dr2.Item("Total Points") = totPoints
+        dr2.Item("FG %") = totFGP.ToString("n2")
+        dr2.Item("3P %") = totTPP.ToString("n2")
+        dr2.Item("FT %") = totFTP.ToString("n2")
+        dr2.Item("Assist") = totAssists
+        dr2.Item("Rebound") = totRebounds
+        dr2.Item("Turnover") = totTurnovers
+        dr2.Item("Steal") = totSteals
+        dr2.Item("Block") = totBlocks
+        dr2.Item("Foul") = totFouls
+ 
+        'Prevents the table from creating extra rows
+        If dtSeasonTotals.Rows.Count > 0 Then dtSeasonTotals.Rows.Clear()
+        dtSeasonTotals.Rows.Add(dr2)
+        GridView1.DataSource = dtSeasonTotals
+        GridView1.DataBind()
+ 
+        'Text out for game stats
+        txtOutput.Text = "Game Stats for " & ddlPlayerStats.SelectedItem.Text & " On " & DateTime.Now.ToLongDateString & vbNewLine & vbNewLine & "Field Goal % = " & gdtFGP.ToString("N2") & " %" & vbNewLine & "3-Point % = " & gdtFTP.ToString("N2") & " %" & vbNewLine & "Freethrow % = " & gdtTPP.ToString("N2") & " %" & vbNewLine & "Assist/Turnover Ratio = " & AST.ToString("N2") & vbNewLine & "True Shooting % = " & TS.ToString("N2") & " %" & vbNewLine & "Effective FG % = " & EFG.ToString("N2") & " %"
+    End Sub
+#End Region
+ 
+#Region "Link Buttons"
+ 
+ 
+    'Tells which view to display depending on which link button is clicked
+ 
+    Protected Sub lnkStats_Click(sender As Object, e As EventArgs) Handles lnkStats.Click
+ 
+        MultiView1.ActiveViewIndex = 0
+ 
+    End Sub
+ 
+    Protected Sub lnkTraining_Click(sender As Object, e As EventArgs) Handles lnkTraining.Click
+        'Tells which view to display depending on which link button is clicked
+        MultiView1.ActiveViewIndex = 1
+ 
+    End Sub
+ 
+    Protected Sub lnkRoster_Click(sender As Object, e As EventArgs) Handles lnkRoster.Click
+        'Tells which view to display depending on which link button is clicked
+        MultiView1.ActiveViewIndex = 2
+ 
+    End Sub
+ 
+    Protected Sub lnkAdd_Click(sender As Object, e As EventArgs) Handles lnkAdd.Click
+        'Tells which view to display depending on which link button is clicked
+        MultiView1.ActiveViewIndex = 4
+ 
+    End Sub
+ 
+    Protected Sub LinkButton1_Click(sender As Object, e As EventArgs) Handles LinkButton1.Click
+        'Tells which view to display depending on which link button is clicked
+        MultiView1.ActiveViewIndex = 5
+    End Sub
+#End Region
+ 
+#Region "Entering Training"
+    Protected Sub btnTrainingEnter_Click(sender As Object, e As EventArgs) Handles btnTrainingEnter.Click
+ 
+ 
+        If dtTraining.Rows.Count > 0 Then dtStats.Rows.Clear()
+        'shows output for selecting a player
+        If ddlPlayerTraining.SelectedIndex < 0 Then
+            txtTrainingOutput.Text = "Please select a player"
+            Exit Sub
+            'shows output for selecting a coach
+        End If
+        If ddlCoachTraining.SelectedIndex < 0 Then
+            txtTrainingOutput.Text = "Please select a Coach"
+            Exit Sub
+        End If
+ 
+     
+        'Error checking for input
+        If txtTrainDate.Text = Nothing OrElse txtScrimmage.Text = Nothing OrElse txtFT.Text = Nothing OrElse txt3.Text = Nothing OrElse txtPullUp.Text = Nothing OrElse txtIsolation.Text = Nothing OrElse txtMikan.Text = Nothing OrElse txtSuicide.Text = Nothing OrElse txtWeight.Text = Nothing Then
+            txtTrainingOutput.Text = "Please enter zeros in sections not practiced"
+            Exit Sub
+        End If
+ 
+ 
+        Try
+            Dim dr As DataRow = dtTraining.NewRow
+ 
+            dr.Item("PracticeDate") = txtTrainDate.Text
+            dr.Item("Scrimmage") = txtScrimmage.Text
+            dr.Item("FreeThrow") = txtFT.Text
+            dr.Item("ThreePoint") = txt3.Text
+            dr.Item("PullUps") = txtPullUp.Text
+            dr.Item("ISO") = txtIsolation.Text
+            dr.Item("Mikan") = txtMikan.Text
+            dr.Item("Suicides") = txtSuicide.Text
+            dr.Item("Weights") = txtWeight.Text
+            dtTraining.Rows.Add(dr)
+ 
+            daTraining.Update(dtTraining)
+            dtTraining.Rows.Clear()
+            daTraining.Fill(dtTraining)
+            GridView3.DataSource = dtTraining
+            GridView3.DataBind()
+            'daTraining.Update(dtTraining)
+            Call UpdateTraining()
+        Catch ex As Exception
+        End Try
+    End Sub
+#End Region
+ 
+#Region "Update Sets"
+    Private Sub UpdateTraining()
+        'Uses Command Builder to update SQL table
+        Dim cmdUpdateTraining As New SqlCommand("UPDATE niccaliboso.Train SET TotalPractices += 1, Scrimmage += @p1, FreeThrow = @p2, ThreePoint += @p3, Pullups += @p4, ISO += @p5, Mikan += @p6, Suicides = @p7, Weights = @p8, PracticeDate= @p9 WHERE PlayerID = @p10", con)
+ 
+        'Creates parameters for update
+        With cmdUpdateTraining.Parameters
+            .AddWithValue("@p1", txtScrimmage.Text)
+            .AddWithValue("@p2", txtFT.Text)
+            .AddWithValue("@p3", txt3.Text)
+            .AddWithValue("@p4", txtPullUp.Text)
+            .AddWithValue("@p5", txtIsolation.Text)
+            .AddWithValue("@p6", txtMikan.Text)
+            .AddWithValue("@p7", txtSuicide.Text)
+            .AddWithValue("@p8", txtWeight.Text)
+            .AddWithValue("@p9", txtTrainDate.Text)
+            .AddWithValue("@p10", CInt(ddlPlayerTraining.SelectedValue))
+        End With
+ 
+        'Try/Catch block to error check
+        Try
+            If con.State = ConnectionState.Closed Then con.Open()
+            cmdUpdateTraining.ExecuteNonQuery()
+        Catch ex As Exception
+            Response.Write(ex.Message)
+        Finally
+            con.Close()
+        End Try
+    End Sub
+ 
+    Private Sub UpdateStats()
+ 
+        Dim cmdUpdateStats As New SqlCommand("UPDATE niccaliboso.Stats SET PlayerName = @p1, FG% = @p2, 3PT% = @p3, Assits = @p4, Rebounds = @p5, Turnovers = @p6, Steals = @p7, Blocks = @p8, Fouls = @p9, FT% = @p10 WHERE PlayerID = @p11", con)
+        'Uses Command Builder to update SQL table
+        With cmdUpdateStats.Parameters
+            .AddWithValue("@p1", ddlPlayerStats.SelectedValue)
+            .AddWithValue("@p2", gdtFGP)
+            .AddWithValue("@p3", gdtTPP)
+            .AddWithValue("@p4", txtAssist.Text)
+            .AddWithValue("@p5", txtRebounds.Text)
+            .AddWithValue("@p6", txtTurnovers.Text)
+            .AddWithValue("@p7", txtSteals.Text)
+            .AddWithValue("@p8", txtBlocks.Text)
+            .AddWithValue("@p9", txtFouls.Text)
+            .AddWithValue("@p10", gdtFTP)
+            .AddWithValue("@p11", CInt(ddlPlayerStats.SelectedValue))
+        End With
+        'Try/Catch block to error check
+        Try
+            If con.State = ConnectionState.Closed Then con.Open()
+            cmdUpdateStats.ExecuteNonQuery()
+        Catch ex As Exception
+            Response.Write(ex.Message)
+        Finally
+            con.Close()
+        End Try
+    End Sub
+    Private Sub UpdateRoster()
+        Dim cmdUpdateRoster As New SqlCommand("UPDATE niccaliboso.Roster SET Name = @p1, Number = @p2, Position = @p3, Height = @p4, Weight = @p5, Year = @p6, HomeTown = @p7, HighSchool = @p8 WHERE PlayerID = @p8", con)
+        'Uses Command Builder to update SQL table
+        With cmdUpdateRoster.Parameters
+            .AddWithValue("@p1", txtAddName.Text)
+            .AddWithValue("@p2", txtAddNumber.Text)
+            .AddWithValue("@p3", txtAddPosition.Text)
+            .AddWithValue("@p4", txtAddHeight.Text)
+            .AddWithValue("@p5", txtAddWeight.Text)
+            .AddWithValue("@p6", txtAddYear.Text)
+            .AddWithValue("@p7", txtAddHome.Text)
+            .AddWithValue("@p8", CInt(dtRosterforDDL.Rows.Count))
+           
+        End With
+        'Try/Catch block to error check
+        Try
+            If con.State = ConnectionState.Closed Then con.Open()
+            cmdUpdateRoster.ExecuteNonQuery()
+        Catch ex As Exception
+            Response.Write(ex.Message)
+        Finally
+            con.Close()
+        End Try
+    End Sub
+#End Region
+ 
+#Region "Adding Players To Roster"
+    Protected Sub btnEnterAdd_Click(sender As Object, e As EventArgs) Handles btnEnterAdd.Click
+        Dim cmdUpdateRoster As New SqlCommand("UPDATE niccaliboso.Roster", con)
+ 
+        'error checking for input 
+        If dtRoster.Rows.Count > 0 Then dtRoster.Rows.Clear()
+        If txtAddName.Text = Nothing OrElse txtAddNumber.Text = Nothing OrElse txtAddPosition.Text = Nothing OrElse txtAddHeight.Text = Nothing OrElse txtAddWeight.Text = Nothing OrElse txtAddHome.Text = Nothing OrElse txtAddSchool.Text = Nothing Then
+            txtOutputAdd.Text = "Please review submission"
+            Exit Sub
+        End If
+        If IsNumeric(txtAddNumber.Text) = False Then
+            txtOutputAdd.Text = "Please check the number field"
+        End If
+ 
+        'creating new rows for when you add a player to the roster
+        Dim dr As DataRow = dtRoster.NewRow
+ 
+        dr.Item("Name") = txtAddName.Text
+        dr.Item("Number") = txtAddNumber.Text
+        dr.Item("Position") = txtAddPosition.Text
+        dr.Item("Height") = txtAddHeight.Text
+        dr.Item("Weight") = txtAddWeight.Text
+        dr.Item("Year") = txtAddYear.Text
+        dr.Item("HomeTown") = txtAddHome.Text
+        dr.Item("HighSchool") = txtAddSchool.Text
+        dtRoster.Rows.Add(dr)
+ 
+        'try/catch block for fragile code
+        Try
+            daRoster.Update(dtRoster)
+            dtRoster.Rows.Clear()
+            daRoster.Fill(dtRoster)
+            GridView4.DataSource = dtRoster
+            GridView4.DataBind()
+ 
+        Catch ex As Exception
+            Response.Write(ex.Message)
+        End Try
+ 
+        Try
+            daRoster.Update(dtRoster)
+            Call UpdateRoster()
+        Catch ex As Exception
+ 
+        End Try
+ 
+        'text output for entering a player
+        txtOutputAdd.Text = "Player added to roster" & vbNewLine & vbNewLine & "Player Name: " & txtAddName.Text & vbNewLine & vbNewLine & "Player Number: " & txtAddNumber.Text & vbNewLine & vbNewLine & "Position: " & txtAddPosition.Text & vbNewLine & vbNewLine & "Height: " & txtAddHeight.Text & vbNewLine & vbNewLine & "Weight: " & txtAddWeight.Text & vbNewLine & vbNewLine & "Year: " & txtAddYear.Text & vbNewLine & vbNewLine & "Home Town: " & txtAddHome.Text & vbNewLine & vbNewLine & "High School: " & txtAddSchool.Text & vbNewLine & vbNewLine & "Congratulations!"
+ 
+ 
+ 
+    End Sub
+#End Region
+ 
+#Region "Password Entry For Adding a Player"
+ 
+    Protected Sub btnEnterPassword_Click(sender As Object, e As EventArgs) Handles btnEnterPassword.Click
+        Dim cmdCheckRegistrant As New SqlCommand("SELECT COUNT(*) from niccaliboso.Passwords WHERE UserID = @p1 AND Password = @p2", con)
+        Dim intRows As Integer = 0
+ 
+        'loop counter for checking the password
+        If gintloopcounter = 2 Then
+            Response.Write("System locked due to excessive attempts")
+            btnEnterPassword.Visible = False
+            txtUserID.Visible = False
+            txtPassword.Visible = False
+            Exit Sub
+        End If
+ 
+        With cmdCheckRegistrant.Parameters
+            .Clear()
+            .AddWithValue("@p1", txtUserID.Text)
+            .AddWithValue("@p2", txtPassword.Text)
+        End With
+ 
+        Try
+            If con.State = ConnectionState.Closed Then con.Open()
+            intRows = cmdCheckRegistrant.ExecuteScalar
+ 
+            If intRows = 0 Then
+                gintloopcounter += 1
+                Response.Write("No Attendee with that UserID and Password " & gintloopcounter)
+                txtUserID.Text = Nothing
+                txtPassword.Text = Nothing
+            End If
+ 
+            'when the right combination of userID and password is entered the add player screen is displayed. I did this so only the coach could have access to this part of the program.
+            If intRows = 1 Then
+                MultiView1.ActiveViewIndex = 3
+                Exit Sub
+            End If
+ 
+        Catch ex As Exception
+            Response.Write(ex.Message)
+        Finally
+            con.Close()
+        End Try
+    End Sub
+#End Region
+ 
+#Region "Clear"
+    Protected Sub Button2_Click(sender As Object, e As EventArgs) Handles Button2.Click
+        'Clears all textboxes for Stats View
+        txtOutput.Text = Nothing
+        txtPoints.Text = Nothing
+        txt3PA.Text = Nothing
+        txt3PM.Text = Nothing
+        txtFTA.Text = Nothing
+        txtFTM.Text = Nothing
+        txtFGA.Text = Nothing
+        txtFGM.Text = Nothing
+        txtAssist.Text = Nothing
+        txtTurnovers.Text = Nothing
+        txtSteals.Text = Nothing
+        txtBlocks.Text = Nothing
+        txtRebounds.Text = Nothing
+        txtFouls.Text = Nothing
+        With ddlPlayerStats
+            .DataSource = dtRosterforDDL
+            .DataTextField = "Name"
+            .DataValueField = "PlayerID"
+            .DataBind()
+            .Items.Insert(0, "Select a player")
+        End With
+    End Sub
+ 
+    Protected Sub btnTrainingClear_Click(sender As Object, e As EventArgs) Handles btnTrainingClear.Click
+        'Clear button for Training View
+        With ddlPlayerTraining
+            .DataSource = dtRosterforDDL
+            .DataTextField = "Name"
+            .DataValueField = "PlayerID"
+            .DataBind()
+            .Items.Insert(0, "Select a player")
+        End With
+        With ddlCoachTraining
+            .DataSource = dtCoachesforDDL
+            .DataTextField = "CoachName"
+            .DataValueField = "CoachID"
+            .DataBind()
+            .Items.Insert(0, "Select a coach")
+        End With
+        txtTrainDate.Text = Nothing
+        txtScrimmage.Text = Nothing
+        txtFT.Text = Nothing
+        txt3.Text = Nothing
+        txtPullUp.Text = Nothing
+        txtIsolation.Text = Nothing
+        txtMikan.Text = Nothing
+        txtSuicide.Text = Nothing
+        txtWeight.Text = Nothing
+        txtTrainingOutput.Text = Nothing
+ 
+    End Sub
+ 
+    Protected Sub btnAddClear_Click(sender As Object, e As EventArgs) Handles btnAddClear.Click
+        'Clears all textboxes for Add Player View
+        txtAddName.Text = Nothing
+        txtAddNumber.Text = Nothing
+        txtAddHeight.Text = Nothing
+        txtAddWeight.Text = Nothing
+        txtAddHome.Text = Nothing
+        txtAddPosition.Text = Nothing
+        txtAddYear.Text = Nothing
+        txtAddSchool.Text = Nothing
+        txtOutputAdd.Text = Nothing
+ 
+    End Sub
+ 
+ 
+#End Region
+#Region "Playbook"
+ 
+    Protected Sub ddlPlays_SelectedIndexChanged(sender As Object, e As EventArgs) Handles ddlPlays.SelectedIndexChanged
+ 
+        'Select case statement that changes the imageURL and textbox texts based on the selected index in the dropdownlist
+        Select Case ddlPlays.SelectedIndex
+            Case 1
+                Image2.ImageUrl = "Cougar.jpg"
+                txtPlays.Text = "1. The play starts with 1 passing to either 2 or 3 on the wing (2 in this example)." & vbNewLine & vbNewLine & "2. 1 then makes a UCLA cut off the screen by 5 looking to receive the pass for the layup." & vbNewLine & vbNewLine & "3. If 1 isn’t open on the cut, 5 steps across and sets another screen for 2." & vbNewLine & vbNewLine & "4. As this is happening, 3 and 4 walk their players down towards the weak side low block to set a double screen for 1." & vbNewLine & vbNewLine & "5. 2 uses the screen from 5 and attack the middle of the floor. After the pick, 5 rolls to the rim." & vbNewLine & vbNewLine & "6. As 2 is dribbling off the screen, 1 cuts hard off the double screen from 3 and 4 and gets open for the open shot." & vbNewLine & vbNewLine & "7. 2 now has three options: They can pass to 1 for the jump shot, attack the rim or pull up for the shot themselves, or pass to 5 rolling towards the rim."
+            Case 2
+                Image2.ImageUrl = "1-4 Floppy.jpg"
+                txtPlays.Text = "1. 1 dribbles down the floor and calls out the name of the play." & vbNewLine & vbNewLine & "2. 2 and 3 cut along the baseline with 2 stopping close to under the rim." & vbNewLine & vbNewLine & "3. 4 and 5 turn and trail once 2 and 3 have cut past them." & vbNewLine & vbNewLine & "4. 3 sets a screen just inside the paint as 4 and 5 set screens a foot outside the low blocks on their respective sides." & vbNewLine & vbNewLine & "5. 2 now has the option of using the staggered screen or the single screen. For this example, 2 uses the staggered screen and cuts to the perimeter." & vbNewLine & vbNewLine & "6. Once 2 's defender has passed through the screen, 3 will cut off the screen the opposite side to 2. For this example, 3 cuts off the single screen by 5." & vbNewLine & vbNewLine & "7. After screening, 4 and 5 immediately duck in and look to receive the quick pass for the layup. Often 4 or 5’s defender will be forced to help on the player cutting to the perimeter which leaves 4 and 5 on smaller defenders." & vbNewLine & vbNewLine & "8. The point guard has now had 4 great passing options which lead to quick open shots." & vbNewLine & vbNewLine & "9. If 2 or 3 catch on the perimeter, the closest post player immediately attempts to get a low seal while the other post player clears to the high post to give them space."
+            Case 3
+                Image2.ImageUrl = "UCLA Curl.jpg"
+                txtPlays.Text = "1. 1 passes to 3 on the wing." & vbNewLine & vbNewLine & "2. 1 then performs a UCLA cut off 5’s screen looking to receive the pass for the open layup. If it’s not open, 1 clears out to the weak side corner." & vbNewLine & vbNewLine & "3. 4 and 5 then set a staggered screen for 2 who curls towards the ring looking to receive the pass for the open layup also. If they don’t receive the pass they clear out to ball side corner." & vbNewLine & vbNewLine & "4. 4 pops out to the top after screening to create space." & vbNewLine & vbNewLine & "5. 5 then sets a pick and roll for 3 who attacks the rim hard looking to score or create a play for a teammate."
+            Case 4
+                Image2.ImageUrl = "Flex Warrior.jpg"
+                txtPlays.Text = "1. The play starts with 1 passing to either of the two post players on the elbow. Preferably the side with the best shooter on the wing." & vbNewLine & vbNewLine & "2. 1 then cuts down the center of the lane and sets a flex screen for 2." & vbNewLine & vbNewLine & "3. 2 can cut either high or low off the flex screen and looks for the pass from 4 and the easy layup." & vbNewLine & vbNewLine & "4. 5 sets a down screen for 1 for a screen the screener action. 1 cuts to the top of the elbow or slot looking for the catch and shoot." & vbNewLine & vbNewLine & "5. After screening for 1, 5 immediately sets another screen for 2 who cuts out to the wing." & vbNewLine & vbNewLine & "6. If 1 wasn’t open for the shot, they must swing the basketball to 2 who should be open on the wing for the shot." & vbNewLine & vbNewLine & "7. After screening 2’s player, 5 attempts to get a deep seal in the paint. If 2 wasn’t open, they can pass in for the score."
+            Case 5
+                Image2.ImageUrl = "X-cross.jpg"
+                txtPlays.Text = "1. The play begins with either of the top two guards making a pass to a wing player. For this example, 1 passes to 3." & vbNewLine & vbNewLine & "2. After the pass, 1 and 2 then cut off 5 towards the opposite blocks. 1 should always cut first and then 2 follows. 3 should watch both of these cutters and if they’re open pass them the basketball for the open layup." & vbNewLine & vbNewLine & "3. 4 then cuts to the top of the key using 5 as a screen and 1  pops out to the wing." & vbNewLine & vbNewLine & "4. 3 swing the basketball to 4 who immediately passes to 1 on the wing." & vbNewLine & vbNewLine & "5. Immediately after passing, 3 cuts baseline using a flex screen from 2. 1 must look inside and see if they can pass to 3 for the easy layup." & vbNewLine & vbNewLine & "6. If 3 isn’t open, 4 and 5 set a staggered down screen for 2 who cuts to the top of the key for the open shot."
+            Case 6
+                Image2.ImageUrl = "1-4 Floppy.jpg"
+                txtPlays.Text = "1. The play begins with 1 take a few dribbles and passing to 2 on the wing. 1 then stays at the top of the key." & vbNewLine & vbNewLine & "2. 5 steps to the strong-side elbow." & vbNewLine & vbNewLine & "3. 2 immediately passes to 4 in the corner." & vbNewLine & vbNewLine & "4. 4 passes back to 2 and begins walking their defender towards the rim." & vbNewLine & vbNewLine & "5. 2 then takes two or three dribbles towards the top of the key forcing X2 to follow in order to deny the open shot." & vbNewLine & vbNewLine & "6. 2 passes to 1 at the top of the key." & vbNewLine & vbNewLine & "7. 5 immediately sets a flare screen for 2." & vbNewLine & vbNewLine & "8. While this is happening, 4 has walked x4 towards the rim and sets a screen so that X4 can’t contest the shot." & vbNewLine & vbNewLine & "9. 2 uses the flare screen and 1 makes the pass over the top for the open three-point shot by 2."
+            Case 7
+                Image2.ImageUrl = "Ram Red.jpg"
+                txtPlays.Text = "1. The play begins with 5 sliding to the high post and setting a double screen with 4." & vbNewLine & vbNewLine & "2. 2 curls tight off 4 and 5’s double screen looking for the catch and shoot on the wing." & vbNewLine & vbNewLine & "3. If 5 notices their defender helping, they duck to the rim for the layup." & vbNewLine & vbNewLine & "4. 3 takes a few steps towards the rim and the pops out calling for the basketball to draw their defender out with them." & vbNewLine & vbNewLine & "5. If no immediate scoring options are open, 1 inbounds the basketball to 2." & vbNewLine & vbNewLine & "6. 4 and 5 immediately set a staggered down screen for 1 who cuts to the top of the key. 4 should ensure not to be too close to 5 on this staggered screen." & vbNewLine & vbNewLine & "7. 2 takes a couple of dribbles and then passes to 1 at the top of the key." & vbNewLine & vbNewLine & "8. 4 immediately sets a screen on 5’s defender and 5 sprints to the top of the key to set the screen for 1." & vbNewLine & vbNewLine & "9. 4 slides down to the weak-side short corner and both wing players create the best angles possible for the drive and kick." & vbNewLine & vbNewLine & "10. 1 uses 5’s screen and attacks the rim looking to score or dish off to an open shooter after reading the help defense."
+ 
+        End Select
+ 
+ 
+    End Sub
+#End Region
+ 
+    Protected Sub ddlFilterStats_SelectedIndexChanged(sender As Object, e As EventArgs) Handles ddlFilterStats.SelectedIndexChanged
+        If ddlFilterStats.SelectedIndex < 0 Then Exit Sub
+        'this is to filter data in the data table 
+        If gdtStats.Rows.Count > 0 Then gdtStats.Rows.Clear()
+ 
+        With gdaStats.SelectCommand.Parameters
+            .Clear()
+            .AddWithValue("@p1", ddlFilterStats.SelectedValue)
+        End With
+ 
+        Try
+            If gdtStats.Rows.Count > 0 Then gdtStats.Rows.Clear()
+ 
+            gdaStats.Fill(gdtStats)
+            GridView5.DataSource = gdtStats
+            GridView5.DataBind()
+        Catch ex As Exception
+            Response.Write(ex.Message)
+        End Try
+    End Sub
+ 
+ 
+ 
+    
+End Class
+ 
+ 
